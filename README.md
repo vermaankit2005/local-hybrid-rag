@@ -94,9 +94,6 @@ Create a `.env` file in the project root (never commit this):
 
 ```env
 OPENROUTER_API_KEY=sk-or-...
-GROQ_API_KEY=gsk_...         # optional, if using Groq models
-TAVILY_API_KEY=tvly-...      # optional, if using Tavily search
-JINA_API_KEY=jina_...        # optional, if using Jina embeddings
 ```
 
 ### 4. Start OpenSearch
@@ -140,19 +137,6 @@ print(answer)
 
 ---
 
-## ⚙️ Configuration
-
-All key settings live in `config/constants.py`:
-
-| Constant | Default | Description |
-|---|---|---|
-| `OPENSEARCH_HOST` | `localhost` | OpenSearch host |
-| `OPENSEARCH_PORT` | `9200` | OpenSearch port |
-| `OPENSEARCH_INDEX` | `mickey_mouse_wiki_articles_v1` | Target index name |
-| `OPENROUTER_EMBEDDING_DIMENSION` | `3072` | Embedding vector size |
-| `TEXT_EMBEDDING_LARGE` | `openai/text-embedding-3-large` | Embedding model (via OpenRouter) |
-| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenRouter API base URL |
-
 ### Hybrid search weights
 
 Defined in `config/setup_opensearch.py` (`_setup_hybrid_pipeline`):
@@ -162,17 +146,6 @@ Defined in `config/setup_opensearch.py` (`_setup_hybrid_pipeline`):
 ```
 
 Adjust to tune the balance between keyword precision and semantic recall.
-
----
-
-## 🔑 API Keys
-
-| Key | Where to get it |
-|---|---|
-| `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) |
-| `GROQ_API_KEY` | [console.groq.com](https://console.groq.com) |
-| `TAVILY_API_KEY` | [app.tavily.com](https://app.tavily.com) |
-| `JINA_API_KEY` | [jina.ai](https://jina.ai) |
 
 ---
 
