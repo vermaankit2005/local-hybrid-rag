@@ -45,7 +45,7 @@ def get_embedding_model():
 def get_llm_model() -> ChatOpenAI:
     return ChatOpenAI(
         openai_api_base=OPENROUTER_BASE_URL,
-        model="openai/gpt-4o-mini",
+        model="deepseek/deepseek-v4-flash",
         openai_api_key=OPENROUTER_API_KEY,
     )
 

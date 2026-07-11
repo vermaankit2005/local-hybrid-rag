@@ -1,6 +1,6 @@
 # 🔍 Local Hybrid RAG
 
-A local **Hybrid Retrieval-Augmented Generation (RAG)** system that combines **BM25 keyword search** and **semantic vector search** on top of a self-hosted [OpenSearch](https://opensearch.org/) instance. Documents are sourced from Wikipedia, embedded via OpenRouter, and answers are generated using GPT-4o-mini.
+A local **Hybrid Retrieval-Augmented Generation (RAG)** system that combines **BM25 keyword search** and **semantic vector search** on top of a self-hosted [OpenSearch](https://opensearch.org/) instance. Documents are sourced from Wikipedia, embedded via OpenRouter, and answers are generated using DeepSeek v4 flash.
 
 ---
 
@@ -25,7 +25,7 @@ OpenSearchVectorStore         ←── embeds + stores (BM25 + knn_vector)
 DocumentRetrieval.hybrid_search()   ←── 40% BM25  +  60% semantic
      │                                   (min-max normalised, arithmetic mean)
      ▼
-RAG Chain (LangChain)               ←── GPT-4o-mini via OpenRouter
+RAG Chain (LangChain)               ←── DeepSeek v4 flash via OpenRouter
      │
      ▼
   Answer (Markdown)
@@ -38,7 +38,7 @@ RAG Chain (LangChain)               ←── GPT-4o-mini via OpenRouter
 - **Hybrid search** — combines BM25 keyword and KNN vector search via OpenSearch's native `hybrid` query + normalisation pipeline
 - **Wikipedia ingestion** — loads any Wikipedia topic, converts pages to clean Markdown, and chunks by heading structure
 - **OpenRouter embeddings** — uses `text-embedding-3-large` (3072-dim) via the OpenRouter API
-- **LLM answering** — GPT-4o-mini answers questions strictly from retrieved context
+- **LLM answering** — DeepSeek v4 flash answers questions strictly from retrieved context
 - **Fully local** — OpenSearch runs in Docker; no cloud search service needed
 - **LangChain / LangGraph** — built on LangChain for easy chain composition
 
@@ -155,7 +155,7 @@ Adjust to tune the balance between keyword precision and semantic recall.
 |---|---|
 | Search & storage | [OpenSearch 2.13](https://opensearch.org/) |
 | Embeddings | `text-embedding-3-large` via [OpenRouter](https://openrouter.ai/) |
-| LLM | `gpt-4o-mini` via [OpenRouter](https://openrouter.ai/) |
+| LLM | `deepseek-v4-flash` via [OpenRouter](https://openrouter.ai/) |
 | Orchestration | [LangChain](https://python.langchain.com/) / [LangGraph](https://langchain-ai.github.io/langgraph/) |
 | Data source | [Wikipedia](https://pypi.org/project/wikipedia/) |
 | Package manager | [uv](https://docs.astral.sh/uv/) |
