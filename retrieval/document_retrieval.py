@@ -1,4 +1,4 @@
-from config.constants import OPENSEARCH_INDEX
+from config.constants import OPENSEARCH_INDEX_CHUNKS
 from config.setup_opensearch import get_opensearch_client, get_embedding_model
 
 
@@ -19,7 +19,7 @@ class DocumentRetrieval:
             },
         }
         resp = get_opensearch_client().search(
-            index=OPENSEARCH_INDEX, body=body,
+            index=OPENSEARCH_INDEX_CHUNKS, body=body,
             params={"search_pipeline": "hybrid-pipeline"},
         )
 

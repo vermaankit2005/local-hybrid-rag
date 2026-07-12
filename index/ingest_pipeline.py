@@ -18,7 +18,7 @@ try:
     # Load documents based on the pipeline configuration
     documents = WikipediaDocumentLoader.load_wiki_documents(
         topic="Mickey Mouse",
-        max_docs=10,
+        max_docs=25,
     )
     logger.info("Loaded %s documents from Wikipedia", len(documents))
 
@@ -34,7 +34,8 @@ try:
 
     # Ingest chunks into the vector store
     vector_store = OpenSearchVectorStore()
-    retriever = vector_store.ingest_documents(all_chunks)
+    vector_store.ingest_documents(documents)
+    retriever = vector_store.ingest_chunks(all_chunks)
     logger.info("Ingestion completed successfully")
 
 except Exception:

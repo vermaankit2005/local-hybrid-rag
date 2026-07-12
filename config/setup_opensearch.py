@@ -4,8 +4,9 @@ import os
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from opensearchpy import OpenSearch
 
-from config.constants import OPENSEARCH_HOST, OPENSEARCH_PORT, OPENSEARCH_INDEX, OPENSEARCH_USERNAME, \
-    OPENSEARCH_PASSWORD, OPENROUTER_EMBEDDING_DIMENSION, OPENROUTER_BASE_URL, TEXT_EMBEDDING_LARGE
+from config.constants import OPENSEARCH_HOST, OPENSEARCH_PORT, OPENSEARCH_INDEX_CHUNKS, OPENSEARCH_USERNAME, \
+    OPENSEARCH_PASSWORD, OPENROUTER_EMBEDDING_DIMENSION, OPENROUTER_BASE_URL, TEXT_EMBEDDING_LARGE, \
+    OPENSEARCH_INDEX_DOCS
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ def get_embedding_model():
         openai_api_key=OPENROUTER_API_KEY
     )
 
+
 def get_llm_model() -> ChatOpenAI:
     return ChatOpenAI(
         openai_api_base=OPENROUTER_BASE_URL,
@@ -50,7 +52,7 @@ def get_llm_model() -> ChatOpenAI:
     )
 
 
-def _setup_opensearch_index():
+def _setup_doc_and_chunk_opensearch_index():
     """
     Sets up the OpenSearch index, if it doesn't already exist.
     Check both text search and vector search are enabled for the index.
@@ -59,13 +61,30 @@ def _setup_opensearch_index():
     """
     client = get_opensearch_client()
 
-    index_name = OPENSEARCH_INDEX
-    index_body = {
+    doc_index_name = OPENSEARCH_INDEX_DOCS
+    doc_index_body = {
+        "mappings": {
+            "properties": {
+                "doc_id": {"type": "keyword"},  # your custom document id
+                "revision_id": {"type": "integer"},  # revision id at document level
+                "document": {  # full LangChain document snapshot
+                    "properties": {
+                        "page_content": {"type": "text"},
+                        "metadata": {"type": "object", "dynamic": True}
+                    }
+                }
+            }
+        }
+    }
+
+    chunk_index_name = OPENSEARCH_INDEX_CHUNKS
+    chunk_index_body = {
         "settings": {
             "index.knn": True,  # 👈 turns ON vector search for this index
         },
         "mappings": {
             "properties": {
+                "doc_id": {"type": "keyword"},  # unique identifier for each document
                 "text": {"type": "text"},  # for BM25 keyword search
                 "embedding": {  # for semantic search
                     "type": "knn_vector",
@@ -90,17 +109,29 @@ def _setup_opensearch_index():
         }
     }
 
-    if not client.indices.exists(index=index_name):
+    # Setting up the OpenSearch documnent index if it doesn't already exist
+    if not client.indices.exists(index=doc_index_name):
         try:
-            client.indices.create(index=index_name, body=index_body)
-            print("Created OpenSearch index '%s'" % index_name)
+            client.indices.create(index=doc_index_name, body=doc_index_body)
+            print("Created OpenSearch document index '%s'" % doc_index_name)
         except Exception:
-            print("Failed creating OpenSearch index '%s'" % index_name)
+            print("Failed creating OpenSearch document index '%s'" % doc_index_name)
             raise
     else:
-        print("OpenSearch index '%s' already exists" % index_name)
+        print("OpenSearch document index '%s' already exists" % doc_index_name)
 
-    return client, index_name
+    # Setting up the OpenSearch chunk index if it doesn't already exist
+    if not client.indices.exists(index=chunk_index_name):
+        try:
+            client.indices.create(index=chunk_index_name, body=chunk_index_body)
+            print("Created OpenSearch chunk index '%s'" % chunk_index_name)
+        except Exception:
+            print("Failed creating OpenSearch index '%s'" % chunk_index_name)
+            raise
+    else:
+        print("OpenSearch chunk index '%s' already exists" % chunk_index_name)
+
+    return client, chunk_index_name
 
 
 def _setup_hybrid_pipeline():
@@ -119,12 +150,6 @@ def _setup_hybrid_pipeline():
 
     client = get_opensearch_client()
 
-    # result = client.transport.perform_request(
-    #     "DELETE", "/_search/pipeline/hybrid-pipeline"
-    # )
-    #
-    # print("Deleted existing hybrid pipeline: %s", result)
-
     hybrid_pipeline_exists = True
     try:
         result = client.transport.perform_request(
@@ -142,5 +167,5 @@ def _setup_hybrid_pipeline():
 
 
 if __name__ == "__main__":
-    _setup_opensearch_index()
+    _setup_doc_and_chunk_opensearch_index()
     _setup_hybrid_pipeline()

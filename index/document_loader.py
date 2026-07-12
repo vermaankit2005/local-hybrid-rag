@@ -1,10 +1,11 @@
 import logging
 import sys
+from typing import Optional
 
 import wikipedia
-from altair.utils import Optional
 from langchain_core.documents import Document
 from markdownify import markdownify
+from wikipedia.exceptions import DisambiguationError, PageError, WikipediaException
 
 sys.stdout.reconfigure(encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -31,10 +32,27 @@ class WikipediaDocumentLoader():
 
         documents = []
         for title in wikipedia.search(topic, results=max_docs):
-            page = wikipedia.page(title, auto_suggest=False, preload=True)
+            try:
+                page = wikipedia.page(title, auto_suggest=False, preload=True)
+            except DisambiguationError as exc:
+                logger.warning(
+                    "Skipping ambiguous Wikipedia result '%s' with %s options",
+                    title,
+                    len(exc.options),
+                )
+                continue
+            except PageError:
+                logger.warning("Skipping missing Wikipedia page '%s'", title)
+                continue
+            except WikipediaException as exc:
+                logger.warning("Skipping Wikipedia page '%s' due to API error: %s", title, exc)
+                continue
+
             page_content = markdownify(page.html(), heading_style="ATX")
             if not page_content.strip():
-                raise ValueError(f"Could not convert Wikipedia page '{title}' to Markdown.")
+                logger.warning("Skipping Wikipedia page '%s' due to empty markdown content", title)
+                continue
+
             documents.append(
                 Document(
                     page_content=page_content,
@@ -46,6 +64,12 @@ class WikipediaDocumentLoader():
                         "revision_id": page.revision_id
                     },
                 )
+            )
+
+        if not documents:
+            raise ValueError(
+                f"No usable Wikipedia pages found for topic '{topic}'. "
+                "Try a more specific topic."
             )
         logger.info("Loaded %s Wikipedia documents for topic '%s'", len(documents), topic)
         return documents
