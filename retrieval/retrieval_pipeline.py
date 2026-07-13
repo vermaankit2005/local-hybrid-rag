@@ -37,4 +37,4 @@ def query(question: str) -> str:
 
 
 if __name__ == "__main__":
-    display(Markdown(query("Tell me everything about Mickey Mouse")).data)
+    display(Markdown(query("How does mickey mouse look like? Explain in 1 paragraph. Include all details")).data)

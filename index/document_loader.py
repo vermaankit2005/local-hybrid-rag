@@ -33,7 +33,7 @@ class WikipediaDocumentLoader():
         documents = []
         for title in wikipedia.search(topic, results=max_docs):
             try:
-                page = wikipedia.page(title, auto_suggest=False, preload=True)
+                page = wikipedia.page(title, auto_suggest=False, preload=False)
             except DisambiguationError as exc:
                 logger.warning(
                     "Skipping ambiguous Wikipedia result '%s' with %s options",

@@ -5,7 +5,7 @@ from config.setup_opensearch import get_opensearch_client, get_embedding_model
 class DocumentRetrieval:
 
     @staticmethod
-    def hybrid_search(query, num_documents=3) -> list[str]:
+    def hybrid_search(query, num_documents=10) -> list[str]:
         query_vector = get_embedding_model().embed_query(query)  # 👈 embed the QUERY too
         body = {
             "size": num_documents,
@@ -30,7 +30,3 @@ class DocumentRetrieval:
 
 
         return page_content
-
-
-if __name__ == "__main__":
-    DocumentRetrieval.hybrid_search(query="What is the history of Mickey Mouse?", num_documents=10)
