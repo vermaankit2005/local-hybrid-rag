@@ -15,8 +15,6 @@ OPENSEARCH_USERNAME = "admin"  # Username for OpenSearch authentication
 OPENSEARCH_PASSWORD = "MyStrongPass123!"  # Password for OpenSearch authentication
 OPENROUTER_EMBEDDING_DIMENSION = "1536"  # Dimension of the embedding vector for the chosen model
 
-
-
 TEXT_EMBEDDING_LARGE = "openai/text-embedding-3-small"
 LLM_MODEL = "deepseek/deepseek-v4-flash"  # Model for the LLM in the RAG pipeline
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
