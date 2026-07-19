@@ -13,7 +13,7 @@ class OpenSearchDocumentRetrieval:
             "query": {
                 "hybrid": {
                     "queries": [
-                        {"match": {"text": {"query": query}}},  # keyword arm
+                        {"multi_match": {"query": query, "fields": ["text", "metadata.title"]}},  # keyword arm
                         {"knn": {"embedding": {"vector": query_vector, "k": num_documents}}},  # vector arm
                     ]
                 }

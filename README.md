@@ -12,19 +12,24 @@ A local **Hybrid Retrieval-Augmented Generation (RAG)** system that combines **B
 Wikipedia API
      │
      ▼
-WikipediaDocumentLoader        ←── fetches & converts HTML → Markdown
-     │
+WikipediaDocumentLoader        ←── fetches & converts HTML → Markdown,
+     │                             then strips [edit] links, images and
+     │                             link URLs (keeping the link text)
      ▼
 OpenSearchDocumentStore.find_unique_documents()
      │                          ←── skips unchanged pages, re-ingests
      │                              pages whose revision_id changed
      ▼
-MarkdownDocumentTextSplitter   ←── splits by Markdown headings + size
+MarkdownDocumentTextSplitterHybrid
+     │                          ←── pass 1: split on H1/H2/H3
+     │                              pass 2: split each section to ~1000 chars
+     │                              (150 overlap), prefixing every chunk with
+     │                              its "H1 > H2 > H3" heading breadcrumb
      │
-     ├──────────────► docs index    (full document snapshot + revision_id)
+     ├──────────────► chunks index  (text for BM25 + knn_vector embedding)
+     │                               text-embedding-3-small, 1536-dim
      │
-     └──────────────► chunks index  (text for BM25 + knn_vector embedding)
-                                     text-embedding-3-small, 1536-dim
+     └──────────────► docs index    (full document snapshot + revision_id)
 ```
 
 ### Retrieval
@@ -38,6 +43,7 @@ LLM query expansion            ←── generates 3–5 sub-questions (multi-qu
      ▼
 hybrid_search() per sub-query  ←── 40% BM25 + 60% semantic
      │                             (min-max normalised, arithmetic mean)
+     │                             keyword arm matches text + metadata.title
      ▼
 flatten + deduplicate
      │
@@ -46,21 +52,23 @@ OpenRouter reranker            ←── cohere/rerank-4-pro, keeps top-N
      │
      ▼
 RAG chain (LangChain)          ←── DeepSeek v4 flash via OpenRouter
-     │
+     │                             answers from context only, or says
+     │                             it doesn't know
      ▼
-  Answer (Markdown)
+  Answer
 ```
 
 ---
 
 ## ✨ Features
 
-- **Hybrid search** — combines BM25 keyword and KNN vector search via OpenSearch's native `hybrid` query + normalisation pipeline
+- **Hybrid search** — combines BM25 keyword and KNN vector search via OpenSearch's native `hybrid` query + normalisation pipeline; the keyword arm is a `multi_match` across chunk text *and* the page title, so title-worded questions still rank
 - **Multi-query retrieval** — an LLM expands one question into several sub-questions, each retrieved separately, then deduplicated
 - **Cross-encoder reranking** — `cohere/rerank-4-pro` via OpenRouter reorders the merged candidates before they reach the LLM
 - **Two-index design** — full documents live in a docs index, chunks in a vector index, so originals stay retrievable
 - **Revision-aware ingestion** — unchanged Wikipedia pages are skipped; changed pages have their old document *and* chunks deleted before re-ingestion, so no duplicates build up
-- **Wikipedia ingestion** — loads any Wikipedia topic, converts pages to clean Markdown, and chunks by heading structure
+- **Heading-aware hybrid chunking** — chunks are split on Markdown headings *then* by size, and each one carries its `H1 > H2 > H3` breadcrumb inline, so an isolated chunk still says what section it came from
+- **Wikipedia ingestion** — loads any Wikipedia topic and converts pages to clean Markdown, stripping `[edit]` links, images and URL noise that would otherwise be embedded
 - **Fully local** — OpenSearch runs in Docker; no cloud search service needed
 - **LangChain / LangGraph** — built on LangChain for easy chain composition
 
@@ -75,8 +83,9 @@ local-hybrid-rag/
 │   ├── setup_opensearch.py     # Client, index & hybrid-pipeline setup
 │   └── utils.py                # Embedding model + LLM factories
 ├── index/
-│   ├── document_loader.py      # WikipediaDocumentLoader
-│   ├── document_splitter.py    # MarkdownDocumentTextSplitter
+│   ├── document_loader.py      # WikipediaDocumentLoader + Markdown cleanup
+│   ├── document_splitter.py    # MarkdownDocumentTextSplitterHybrid (headings + size)
+│   ├── __document_splitter___.py  # superseded heading-only splitter, kept for reference
 │   ├── opensearch_ingest.py    # OpenSearchDocumentStore (dedupe, index docs + chunks)
 │   └── ingest_pipeline.py      # End-to-end ingestion script
 ├── retrieval/
@@ -189,6 +198,16 @@ All knobs live in `config/constants.py`:
 | `TEXT_EMBEDDING_LARGE` | Embedding model (`openai/text-embedding-3-small`) |
 | `OPENROUTER_EMBEDDING_DIMENSION` | Must match the embedding model (1536) |
 | `LLM_MODEL` | Answering model (`deepseek/deepseek-v4-flash`) |
+
+### Chunking
+
+Chunk sizing is set when constructing the splitter in `index/ingest_pipeline.py`:
+
+```python
+MarkdownDocumentTextSplitterHybrid(chunk_size=1000, chunk_overlap=150)
+```
+
+Headings split first, so a section shorter than `chunk_size` stays in one piece.
 
 ### Hybrid search weights
 

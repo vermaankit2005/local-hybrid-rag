@@ -10,6 +10,15 @@ from wikipedia.exceptions import DisambiguationError, PageError, WikipediaExcept
 sys.stdout.reconfigure(encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+import re
+
+
+def _clean_markdown(text: str) -> str:
+    text = re.sub(r"\[\[edit\]\([^)]*\)\]", "", text)  # [edit] links
+    text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)  # images
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # links -> keep the words
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
 
 class WikipediaDocumentLoader():
 
@@ -48,7 +57,7 @@ class WikipediaDocumentLoader():
                 logger.warning("Skipping Wikipedia page '%s' due to API error: %s", title, exc)
                 continue
 
-            page_content = markdownify(page.html(), heading_style="ATX")
+            page_content = _clean_markdown(markdownify(page.html(), heading_style="ATX"))
             if not page_content.strip():
                 logger.warning("Skipping Wikipedia page '%s' due to empty markdown content", title)
                 continue

@@ -14,8 +14,8 @@ RAG_PROMPT = ChatPromptTemplate.from_messages([
 
     ("system",
      "You are a helpful assistant. Answer using only the provided context. "
-     "If the context doesn't contain the answer, say you don't know. "
-     "Reply strictly in formatted markdown."),
+     "If the context doesn't contain the answer, say you don't know."
+     ),
 
     ("human", "Context:\n{context}\n\nQuestion: {question}"),
 ])
@@ -89,4 +89,4 @@ def multi_query_search(question: str) -> str:
 
 
 if __name__ == "__main__":
-    print(multi_query_search("Tell me about Mickey Mouse?"))
+    print(multi_query_search("Where do mickey mouse live?"))

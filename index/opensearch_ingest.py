@@ -89,7 +89,7 @@ class OpenSearchDocumentStore:
             verify_certs=False,
             vector_field="embedding",  # matches Step 3 mapping
             text_field="text",
-            bulk_size=1000,  # Adjust based on your needs
+            bulk_size=3000,  # Adjust based on your needs
         )
         logger.info(f"Ingested {len(docs)} chunks into OpenSearch index {OPENSEARCH_INDEX_CHUNKS}")
 

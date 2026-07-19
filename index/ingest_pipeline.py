@@ -3,7 +3,7 @@ import sys
 
 from config.constants import RAG_TOPIC, MAX_DOCUMENTS
 from index.document_loader import WikipediaDocumentLoader
-from index.document_splitter import MarkdownDocumentTextSplitter
+from index.document_splitter import MarkdownDocumentTextSplitterHybrid
 from index.opensearch_ingest import OpenSearchDocumentStore
 
 logging.basicConfig(
@@ -26,13 +26,13 @@ try:
 
     unique_documents = vector_store.find_unique_documents(documents)
 
-    if unique_documents is None:
+    if not unique_documents:
         logger.error("No unique documents found for ingestion")
     else:
         logger.info("Found %s unique documents for ingestion", len(unique_documents))
         logger.info("%s duplicate documents will be skipped", len(documents) - len(unique_documents))
         # Split documents into chunks
-        splitter = MarkdownDocumentTextSplitter()
+        splitter = MarkdownDocumentTextSplitterHybrid()
         all_chunks = []
 
         for doc in unique_documents:
@@ -42,8 +42,8 @@ try:
         logger.info("Prepared %s chunks for ingestion", len(all_chunks))
 
         # Ingest chunks into the vector store
-        vector_store.ingest_documents(unique_documents)
         retriever = vector_store.ingest_chunks(all_chunks)
+        vector_store.ingest_documents(unique_documents)
         logger.info("Ingestion completed successfully")
 
 except Exception:
