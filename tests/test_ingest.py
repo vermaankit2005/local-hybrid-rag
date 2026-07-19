@@ -12,7 +12,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from config.constants import OPENSEARCH_INDEX_DOCS
-from index.ingest import OpenSearchVectorStore
+from index.opensearch_ingest import OpenSearchDocumentStore
 
 TEST_PAGE_ID = "test-integration-99999"
 
@@ -20,7 +20,7 @@ TEST_PAGE_ID = "test-integration-99999"
 class TestFindUniqueDocumentsIntegration(unittest.TestCase):
 
     def setUp(self):
-        self.store = OpenSearchVectorStore()
+        self.store = OpenSearchDocumentStore()
         self.client = self.store.client
         self._cleanup()
         # Seed an existing document with revision_id=1

@@ -1,12 +1,10 @@
 import logging
 import os
 
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from opensearchpy import OpenSearch
 
 from config.constants import OPENSEARCH_HOST, OPENSEARCH_PORT, OPENSEARCH_INDEX_CHUNKS, OPENSEARCH_USERNAME, \
-    OPENSEARCH_PASSWORD, OPENROUTER_EMBEDDING_DIMENSION, OPENROUTER_BASE_URL, TEXT_EMBEDDING_LARGE, \
-    OPENSEARCH_INDEX_DOCS, LLM_MODEL
+    OPENSEARCH_PASSWORD, OPENROUTER_EMBEDDING_DIMENSION, OPENSEARCH_INDEX_DOCS
 
 logger = logging.getLogger(__name__)
 
@@ -31,27 +29,6 @@ def get_opensearch_client() -> OpenSearch:
         )
     return client
 
-
-def get_embedding_model():
-    """
-    Returns an instance of OpenAIEmbeddings configured with the OpenRouter API key and model.
-    :return: An instance of OpenAIEmbeddings.
-    """
-    return OpenAIEmbeddings(
-        openai_api_base=OPENROUTER_BASE_URL,
-        model=TEXT_EMBEDDING_LARGE,
-        openai_api_key=OPENROUTER_API_KEY
-    )
-
-
-def get_llm_model() -> ChatOpenAI:
-    return ChatOpenAI(
-        openai_api_base=OPENROUTER_BASE_URL,
-        model=LLM_MODEL,
-        openai_api_key=OPENROUTER_API_KEY,
-        temperature=0.4,
-        reasoning_effort="high"
-    )
 
 def _setup_doc_and_chunk_opensearch_index():
     """

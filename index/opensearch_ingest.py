@@ -7,18 +7,33 @@ from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStoreRetriever
 
 from config.constants import OPENSEARCH_BASE_URL, OPENSEARCH_INDEX_CHUNKS, OPENSEARCH_INDEX_DOCS
-from config.setup_opensearch import get_embedding_model, get_opensearch_client
+from config.setup_opensearch import get_opensearch_client
+from config.utils import get_embedding_model
 
 load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-class OpenSearchVectorStore:
+class OpenSearchDocumentStore:
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
     def __init__(self):
         self.embedding_model = None
         self.client = get_opensearch_client()
+
+    def _delete_document_and_chunks(self, doc_id: str):
+        """
+        Delete a document and its associated chunks from OpenSearch.
+        :param doc_id: The ID of the document to be deleted.
+        """
+        self.client.delete_by_query(
+            index=OPENSEARCH_INDEX_DOCS,
+            body={"query": {"match": {"doc_id": doc_id}}},
+        )
+        self.client.delete_by_query(
+            index=OPENSEARCH_INDEX_CHUNKS,
+            body={"query": {"match": {"metadata.pageid": doc_id}}},
+        )
 
     def ingest_documents(self, docs: list[Document]):
         """
@@ -80,20 +95,6 @@ class OpenSearchVectorStore:
 
         return vector_store.as_retriever(search_kwargs={"k": 3})  # Return a retriever for querying the vector store
 
-    def _delete_document_and_chunks(self, doc_id: str):
-        """
-        Delete a document and its associated chunks from OpenSearch.
-        :param doc_id: The ID of the document to be deleted.
-        """
-        self.client.delete_by_query(
-            index=OPENSEARCH_INDEX_DOCS,
-            body={"query": {"match": {"doc_id": doc_id}}},
-        )
-        self.client.delete_by_query(
-            index=OPENSEARCH_INDEX_CHUNKS,
-            body={"query": {"match": {"metadata.pageid": doc_id}}},
-        )
-
     def find_unique_documents(self, docs: list[Document]) -> list[Document]:
         """
         Check if the document exist,
@@ -105,7 +106,6 @@ class OpenSearchVectorStore:
         :param docs: List of Document objects to be deduplicated.
         :return: List of unique Document objects.
         """
-
         unique_doc_list = []
 
         for doc in docs:

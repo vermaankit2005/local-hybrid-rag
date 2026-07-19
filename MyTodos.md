@@ -1,3 +1,3 @@
 ### Todos: 
 
-1. [ ] Implement deduplication logic for the data indexing process to ensure unique entries.
+1. [ ] Implement Abstract pattern in the retriever module to allow for different retrieval strategies.

@@ -16,3 +16,7 @@ wheels/
 
 # IDE
 .idea/
+.vscode/
+
+# Misc
+*.stackdump

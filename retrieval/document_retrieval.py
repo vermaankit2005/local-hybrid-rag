@@ -1,8 +1,9 @@
 from config.constants import OPENSEARCH_INDEX_CHUNKS
-from config.setup_opensearch import get_opensearch_client, get_embedding_model
+from config.setup_opensearch import get_opensearch_client
+from config.utils import get_embedding_model
 
 
-class DocumentRetrieval:
+class OpenSearchDocumentRetrieval:
 
     @staticmethod
     def hybrid_search(query, num_documents=10) -> list[str]:
@@ -28,5 +29,10 @@ class DocumentRetrieval:
         for hit in resp["hits"]["hits"]:
             page_content.append(hit["_source"]["text"])
 
+        print(f"Retrieved {len(page_content)} documents from OpenSearch.")
+
+        for i, content in enumerate(page_content):
+            print("\n" + "*" * 25 + f" Document {i + 1} " + "*" * 25 + "\n")
+            print(f"Document {i + 1} content: {content[:500]}...")  # Print first 500 characters of each document
 
         return page_content

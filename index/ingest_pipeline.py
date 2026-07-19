@@ -2,9 +2,9 @@ import logging
 import sys
 
 from config.constants import RAG_TOPIC, MAX_DOCUMENTS
-from document_loader import WikipediaDocumentLoader
-from document_splitter import MarkdownDocumentTextSplitter
-from ingest import OpenSearchVectorStore
+from index.document_loader import WikipediaDocumentLoader
+from index.document_splitter import MarkdownDocumentTextSplitter
+from index.opensearch_ingest import OpenSearchDocumentStore
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 try:
     logger.info("Starting ingestion pipeline")
 
-    vector_store = OpenSearchVectorStore()
+    vector_store = OpenSearchDocumentStore()
     # Load documents based on the pipeline configuration
     documents = WikipediaDocumentLoader.load_wiki_documents(
         topic=RAG_TOPIC,
