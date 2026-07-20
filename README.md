@@ -44,16 +44,18 @@ LLM query expansion            ←── generates 3–5 sub-questions (multi-qu
 hybrid_search() per sub-query  ←── 40% BM25 + 60% semantic
      │                             (min-max normalised, arithmetic mean)
      │                             keyword arm matches text + metadata.title
+     │                             returns LangChain Documents (text + metadata)
      ▼
-flatten + deduplicate
-     │
+flatten + deduplicate          ←── by metadata.chunk_id, keeps first occurrence
+     │                             and preserves retrieval order
      ▼
-OpenRouter reranker            ←── cohere/rerank-4-pro, keeps top-N
+OpenRouter reranker            ←── cohere/rerank-4-pro, keeps top 5
      │
      ▼
 RAG chain (LangChain)          ←── DeepSeek v4 flash via OpenRouter
      │                             answers from context only, or says
-     │                             it doesn't know
+     │                             it doesn't know; cites source URLs
+     │                             when the context carries them
      ▼
   Answer
 ```
@@ -64,7 +66,9 @@ RAG chain (LangChain)          ←── DeepSeek v4 flash via OpenRouter
 
 - **Hybrid search** — combines BM25 keyword and KNN vector search via OpenSearch's native `hybrid` query + normalisation pipeline; the keyword arm is a `multi_match` across chunk text *and* the page title, so title-worded questions still rank
 - **Multi-query retrieval** — an LLM expands one question into several sub-questions, each retrieved separately, then deduplicated
+- **Metadata all the way through** — retrieval returns LangChain `Document` objects, so title, source URL and heading breadcrumb survive reranking and reach the prompt; dedup keys off `chunk_id` instead of comparing raw text
 - **Cross-encoder reranking** — `cohere/rerank-4-pro` via OpenRouter reorders the merged candidates before they reach the LLM
+- **Swappable answering LLM** — DeepSeek v4 flash via OpenRouter, or `gpt-oss-120b` on Groq (`get_grok_llm()`) when you want a faster answer leg
 - **Two-index design** — full documents live in a docs index, chunks in a vector index, so originals stay retrievable
 - **Revision-aware ingestion** — unchanged Wikipedia pages are skipped; changed pages have their old document *and* chunks deleted before re-ingestion, so no duplicates build up
 - **Heading-aware hybrid chunking** — chunks are split on Markdown headings *then* by size, and each one carries its `H1 > H2 > H3` breadcrumb inline, so an isolated chunk still says what section it came from
@@ -81,7 +85,7 @@ local-hybrid-rag/
 ├── config/
 │   ├── constants.py            # OpenSearch connection, index names, model constants
 │   ├── setup_opensearch.py     # Client, index & hybrid-pipeline setup
-│   └── utils.py                # Embedding model + LLM factories
+│   └── utils.py                # Embedding model + LLM factories (OpenRouter, Groq)
 ├── index/
 │   ├── document_loader.py      # WikipediaDocumentLoader + Markdown cleanup
 │   ├── document_splitter.py    # MarkdownDocumentTextSplitterHybrid (headings + size)
@@ -131,6 +135,7 @@ Create a `.env` file in the project root (never commit this):
 
 ```env
 OPENROUTER_API_KEY=sk-or-...
+GROQ_API_KEY=gsk_...        # only needed if you use get_grok_llm()
 ```
 
 ### 4. Start OpenSearch
@@ -221,7 +226,18 @@ Adjust to tune the balance between keyword precision and semantic recall. Note t
 
 ### Reranking
 
-`retrieval/reranker_setup.py` calls OpenRouter's `/rerank` endpoint with `cohere/rerank-4-pro` and returns the top `top_n` (default 5) documents.
+`retrieval/reranker_setup.py` calls OpenRouter's `/rerank` endpoint with `cohere/rerank-4-pro` and returns the top `top_n` (default 5) documents. It sends only `page_content` to the API, then maps the returned indices back to the original `Document` objects so metadata is never lost. `top_n` is clamped to the number of candidates, so a short candidate list won't fail the request.
+
+### Answering LLM
+
+`config/utils.py` exposes two factories:
+
+| Factory | Model | Notes |
+|---|---|---|
+| `get_llm_model()` | `deepseek/deepseek-v4-flash` via OpenRouter | used for query expansion and the multi-query answer |
+| `get_grok_llm()` | `openai/gpt-oss-120b` via Groq | used by `standard_search()`; reasoning hidden |
+
+Both run at `temperature=0.4` to keep answers grounded.
 
 ---
 
@@ -232,7 +248,7 @@ Adjust to tune the balance between keyword precision and semantic recall. Note t
 | Search & storage | [OpenSearch 2.13](https://opensearch.org/) |
 | Embeddings | `text-embedding-3-small` via [OpenRouter](https://openrouter.ai/) |
 | Reranking | `cohere/rerank-4-pro` via [OpenRouter](https://openrouter.ai/) |
-| LLM | `deepseek-v4-flash` via [OpenRouter](https://openrouter.ai/) |
+| LLM | `deepseek-v4-flash` via [OpenRouter](https://openrouter.ai/), `gpt-oss-120b` via [Groq](https://groq.com/) |
 | Orchestration | [LangChain](https://python.langchain.com/) / [LangGraph](https://langchain-ai.github.io/langgraph/) |
 | Data source | [Wikipedia](https://pypi.org/project/wikipedia/) |
 | Package manager | [uv](https://docs.astral.sh/uv/) |
